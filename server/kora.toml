@@ -1,0 +1,114 @@
+[kora]
+rate_limit = 100
+
+[metrics]
+enabled = true
+endpoint = "/metrics"
+port = 8080
+scrape_interval = 60
+
+[metrics.fee_payer_balance]
+enabled = true
+expiry_seconds = 30
+
+[kora.auth]
+# api_key = "your-api-key-here"
+# hmac_secret = "your-hmac-secret-here"
+
+[kora.cache]
+enabled = false
+default_ttl = 300
+account_ttl = 60
+
+[kora.enabled_methods]
+liveness = true
+estimate_transaction_fee = true
+get_supported_tokens = true
+sign_transaction = true
+sign_and_send_transaction = true
+transfer_transaction = true
+get_blockhash = true
+get_config = true
+get_payer_signer = true
+
+[validation]
+max_allowed_lamports = 2500000
+max_signatures = 10
+price_source = "Mock"
+allow_durable_transactions = false
+
+allowed_programs = [
+  "11111111111111111111111111111111",             # System Program
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", # Token Program
+  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", # Associated Token Program
+  "AddressLookupTab1e1111111111111111111111111",  # Address Lookup Table
+  "ComputeBudget111111111111111111111111111111",   # Compute Budget
+  "BUYuxRfhCMWavaUWxhGtPP3ksKEDZxCD5gzknk3JfAya", # let-me-buy program
+]
+
+# Updated by `pnpm run setup` for local testing, or set manually for mainnet
+allowed_tokens = [
+  "8fnuqCuNaXgCLbSL8FajF1aPEmBq9mptoyNCni7AEi3G",
+]
+
+allowed_spl_paid_tokens = [
+  "8fnuqCuNaXgCLbSL8FajF1aPEmBq9mptoyNCni7AEi3G",
+]
+
+disallowed_accounts = []
+
+[validation.fee_payer_policy]
+
+[validation.fee_payer_policy.system]
+allow_transfer = true
+allow_assign = true
+allow_create_account = true
+allow_allocate = true
+
+[validation.fee_payer_policy.system.nonce]
+allow_initialize = true
+allow_advance = true
+allow_authorize = true
+allow_withdraw = true
+
+[validation.fee_payer_policy.spl_token]
+allow_transfer = true
+allow_burn = true
+allow_close_account = true
+allow_approve = true
+allow_revoke = true
+allow_set_authority = true
+allow_mint_to = true
+allow_initialize_mint = true
+allow_initialize_account = true
+allow_initialize_multisig = true
+allow_freeze_account = true
+allow_thaw_account = true
+
+[validation.fee_payer_policy.token_2022]
+allow_transfer = true
+allow_burn = true
+allow_close_account = true
+allow_approve = true
+allow_revoke = true
+allow_set_authority = true
+allow_mint_to = true
+allow_initialize_mint = true
+allow_initialize_account = true
+allow_initialize_multisig = true
+allow_freeze_account = true
+allow_thaw_account = true
+
+[validation.price]
+type = "margin"
+margin = 0.1
+
+[validation.token2022]
+blocked_mint_extensions = []
+blocked_account_extensions = []
+
+[kora.usage_limit]
+enabled = false
+cache_url = "redis://localhost:6379"
+max_transactions = 100
+fallback_if_unavailable = false

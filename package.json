@@ -1,0 +1,33 @@
+{
+  "name": "kora-let-me-buy-example",
+  "version": "1.0.0",
+  "description": "Gasless Solana transaction example using Kora to call the let-me-buy program, paying fees in USDC",
+  "scripts": {
+    "purchase": "tsx src/make-purchase.ts",
+    "purchase:fire-and-forget": "tsx src/make-purchase-fire-and-forget.ts",
+    "setup": "tsx src/local-setup.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "solana",
+    "kora",
+    "gasless",
+    "let-me-buy"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@solana-program/compute-budget": "^0.13.0",
+    "@solana-program/system": "^0.12.0",
+    "@solana-program/token": "^0.10.0",
+    "@solana/kit": "^6.1.0",
+    "@solana/kora": "^0.1.3",
+    "@solana/transaction-confirmation": "^6.0.0",
+    "dotenv": "^17.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.13",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3"
+  }
+}
