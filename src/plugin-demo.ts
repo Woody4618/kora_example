@@ -30,12 +30,6 @@ async function main() {
     getBase58Encoder().encode(secret),
   );
 
-  // const client = createDefaultRpcClient({
-  //   url: rpcUrl,
-  //   payer: payer,
-  //   rpcSubscriptionsConfig: { url: wsUrl },
-  // }).use(letMeBuyProgram());
-
   const storeName = process.env.STORE_NAME ?? "kora-test-store";
   const productName = process.env.PRODUCT_NAME ?? "coffee";
   const tableNumber = Number(process.env.TABLE_NUMBER ?? "1");
