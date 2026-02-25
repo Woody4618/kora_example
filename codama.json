@@ -1,0 +1,10 @@
+{
+  "idl": "src/idl/let_me_buy.json",
+  "before": [],
+  "scripts": {
+    "js": {
+      "from": "@codama/renderers-js",
+      "args": ["src/generated"]
+    }
+  }
+}

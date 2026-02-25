@@ -6,7 +6,6 @@ import {
   address,
   getBase64EncodedWireTransaction,
   partiallySignTransactionMessageWithSigners,
-  partiallySignTransaction,
   Blockhash,
   KeyPairSigner,
   MicroLamports,
@@ -21,7 +20,7 @@ import {
   updateOrAppendSetComputeUnitLimitInstruction,
   updateOrAppendSetComputeUnitPriceInstruction,
 } from "@solana-program/compute-budget";
-import { getMakePurchaseInstruction } from "./program.js";
+import { getMakePurchaseInstructionAsync } from "./generated/index.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -40,7 +39,7 @@ export async function loadBuyerKeypair(): Promise<KeyPairSigner> {
   if (!secret) {
     throw new Error(
       "BUYER_KEYPAIR env variable is not set. " +
-        "Set it to a base58-encoded Solana secret key."
+        "Set it to a base58-encoded Solana secret key.",
     );
   }
   return createKeyPairSignerFromBytes(getBase58Encoder().encode(secret));
@@ -53,11 +52,9 @@ export interface PurchaseTxResult {
 }
 
 /**
- * Builds a gasless purchase transaction: constructs the make_purchase
- * instruction, estimates Kora fees, appends the USDC payment instruction,
- * and partially signs with the buyer's keypair.
- *
- * Returns the base64-encoded wire transaction ready for Kora to co-sign.
+ * Builds a gasless purchase transaction using the Codama-generated
+ * let-me-buy client. PDAs, ATAs, and program addresses are resolved
+ * automatically by the generated instruction builder.
  */
 export async function buildPurchaseTransaction(): Promise<PurchaseTxResult> {
   console.log("\n========================================");
@@ -72,7 +69,7 @@ export async function buildPurchaseTransaction(): Promise<PurchaseTxResult> {
   if (!storeName || !productName || !storeAuthority) {
     throw new Error(
       "Missing required env vars: STORE_NAME, PRODUCT_NAME, STORE_AUTHORITY. " +
-        "Copy .env.example to .env and fill in the values."
+        "Copy .env.example to .env and fill in the values.",
     );
   }
 
@@ -81,8 +78,6 @@ export async function buildPurchaseTransaction(): Promise<PurchaseTxResult> {
 
   const kora = new KoraClient({
     rpcUrl: CONFIG.koraRpcUrl,
-    // apiKey: process.env.KORA_API_KEY,
-    // hmacSecret: process.env.KORA_HMAC_SECRET,
   });
 
   console.log("\n[2/6] Loading keypairs");
@@ -91,20 +86,23 @@ export async function buildPurchaseTransaction(): Promise<PurchaseTxResult> {
   console.log("  Buyer:", buyer.address);
   console.log("  Kora fee payer:", signer_address);
 
-  console.log("\n[3/6] Building make_purchase instruction");
+  console.log("\n[3/6] Building make_purchase instruction (Codama-generated)");
   console.log("  Store:", storeName);
   console.log("  Product:", productName);
   console.log("  Table:", tableNumber);
   console.log("  Mint (USDC):", USDC_MINT);
 
-  const purchaseIx = await getMakePurchaseInstruction({
+  const mint = address(USDC_MINT);
+
+  const purchaseIx = await getMakePurchaseInstructionAsync({
+    signer: buyer,
+    authority: address(storeAuthority),
+    mint,
     storeName,
     productName,
     tableNumber,
-    buyer: buyer.address,
-    storeAuthority: address(storeAuthority),
-    mint: address(USDC_MINT),
   });
+
   const instructions: Instruction[] = [purchaseIx];
 
   console.log("\n[4/6] Estimating fee & getting Kora payment instruction");
@@ -116,15 +114,21 @@ export async function buildPurchaseTransaction(): Promise<PurchaseTxResult> {
     (tx) => setTransactionMessageFeePayerSigner(noopSigner, tx),
     (tx) =>
       setTransactionMessageLifetimeUsingBlockhash(
-        { blockhash: estimateBlockhash.blockhash as Blockhash, lastValidBlockHeight: 0n },
-        tx
+        {
+          blockhash: estimateBlockhash.blockhash as Blockhash,
+          lastValidBlockHeight: 0n,
+        },
+        tx,
       ),
-    (tx) => updateOrAppendSetComputeUnitPriceInstruction(CONFIG.computeUnitPrice, tx),
-    (tx) => updateOrAppendSetComputeUnitLimitInstruction(CONFIG.computeUnitLimit, tx),
-    (tx) => appendTransactionMessageInstructions(instructions, tx)
+    (tx) =>
+      updateOrAppendSetComputeUnitPriceInstruction(CONFIG.computeUnitPrice, tx),
+    (tx) =>
+      updateOrAppendSetComputeUnitLimitInstruction(CONFIG.computeUnitLimit, tx),
+    (tx) => appendTransactionMessageInstructions(instructions, tx),
   );
 
-  const signedEstimateTx = await partiallySignTransactionMessageWithSigners(estimateTx);
+  const signedEstimateTx =
+    await partiallySignTransactionMessageWithSigners(estimateTx);
   const estimateWire = getBase64EncodedWireTransaction(signedEstimateTx);
 
   const paymentInfo = await kora.getPaymentInstruction({
@@ -132,7 +136,10 @@ export async function buildPurchaseTransaction(): Promise<PurchaseTxResult> {
     fee_token: USDC_MINT,
     source_wallet: buyer.address,
   });
-  console.log("  Kora fee (USDC token units):", paymentInfo.payment_amount.toString());
+  console.log(
+    "  Kora fee (USDC token units):",
+    paymentInfo.payment_amount.toString(),
+  );
 
   console.log("\n[5/6] Building final transaction with payment");
   const finalBlockhash = await kora.getBlockhash();
@@ -142,22 +149,46 @@ export async function buildPurchaseTransaction(): Promise<PurchaseTxResult> {
     (tx) => setTransactionMessageFeePayerSigner(noopSigner, tx),
     (tx) =>
       setTransactionMessageLifetimeUsingBlockhash(
-        { blockhash: finalBlockhash.blockhash as Blockhash, lastValidBlockHeight: 0n },
-        tx
+        {
+          blockhash: finalBlockhash.blockhash as Blockhash,
+          lastValidBlockHeight: 0n,
+        },
+        tx,
       ),
-    (tx) => updateOrAppendSetComputeUnitPriceInstruction(CONFIG.computeUnitPrice, tx),
-    (tx) => updateOrAppendSetComputeUnitLimitInstruction(CONFIG.computeUnitLimit, tx),
+    (tx) =>
+      updateOrAppendSetComputeUnitPriceInstruction(CONFIG.computeUnitPrice, tx),
+    (tx) =>
+      updateOrAppendSetComputeUnitLimitInstruction(CONFIG.computeUnitLimit, tx),
     (tx) =>
       appendTransactionMessageInstructions(
-        [...instructions, paymentInfo.payment_instruction],
-        tx
-      )
+        [...instructions, stripSignerMeta(paymentInfo.payment_instruction)],
+        tx,
+      ),
   );
 
-  const partiallySignedTx = await partiallySignTransactionMessageWithSigners(finalTx);
-  const userSignedTx = await partiallySignTransaction([buyer.keyPair], partiallySignedTx);
-  const finalWire = getBase64EncodedWireTransaction(userSignedTx);
+  const signedTx = await partiallySignTransactionMessageWithSigners(finalTx);
+  const finalWire = getBase64EncodedWireTransaction(signedTx);
   console.log("  Transaction built and signed by buyer");
 
   return { transaction: finalWire, signerAddress: signer_address, kora };
+}
+
+/**
+ * Strips embedded TransactionSigner instances from instruction account metas.
+ * Needed because Kora's getPaymentInstruction() internally creates its own
+ * noopSigner for the buyer address, which conflicts with the buyer signer
+ * embedded by the Codama-generated instruction. Removing the duplicate
+ * lets partiallySignTransactionMessageWithSigners work with a single
+ * signer instance per address. This will be fixed in the next Kora release.
+ * TODO: Remove this function when Kora is fixed.
+ */
+function stripSignerMeta(ix: Instruction): Instruction {
+  if (!ix.accounts) return ix;
+  return {
+    ...ix,
+    accounts: ix.accounts.map((meta) => ({
+      address: meta.address,
+      role: meta.role,
+    })),
+  };
 }
