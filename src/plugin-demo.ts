@@ -11,7 +11,7 @@ import {
   address,
 } from "@solana/kit";
 import { createDefaultRpcClient } from "@solana/kit-plugins";
-import { letMeBuyProgram } from "../js-client/src/generated/index.js";
+import { letMeBuyProgram } from "../clients/js/src/generated/index.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -26,19 +26,15 @@ async function main() {
 
   const secret = process.env.BUYER_KEYPAIR;
   if (!secret) throw new Error("BUYER_KEYPAIR not set");
-  const buyer = await createKeyPairSignerFromBytes(
-    getBase58Encoder().encode(secret)
+  const payer = await createKeyPairSignerFromBytes(
+    getBase58Encoder().encode(secret),
   );
 
-  // Create a Kit client, then extend it with the letMeBuy plugin.
-  // That's it — we get fully typed accounts + instructions on client.letMeBuy.
-  const client = createDefaultRpcClient({
-    url: rpcUrl,
-    payer: buyer,
-    rpcSubscriptionsConfig: { url: wsUrl },
-  }).use(
-    letMeBuyProgram()
-  );
+  // const client = createDefaultRpcClient({
+  //   url: rpcUrl,
+  //   payer: payer,
+  //   rpcSubscriptionsConfig: { url: wsUrl },
+  // }).use(letMeBuyProgram());
 
   const storeName = process.env.STORE_NAME ?? "kora-test-store";
   const productName = process.env.PRODUCT_NAME ?? "coffee";
@@ -46,18 +42,22 @@ async function main() {
   const storeAuthority = address(process.env.STORE_AUTHORITY!);
   const mint = address(process.env.USDC_MINT!);
 
-  console.log("Buyer:", buyer.address);
+  console.log("Buyer:", payer.address);
   console.log("Store:", storeName);
   console.log("Product:", productName);
   console.log("Mint:", mint);
 
-  // One call does everything: resolves PDAs (including sender & recipient
-  // token accounts), builds the instruction, signs, sends, and confirms.
   console.log("\nSending makePurchase via plugin...\n");
+
+  const client = createDefaultRpcClient({
+    url: rpcUrl,
+    payer: payer,
+    rpcSubscriptionsConfig: { url: wsUrl },
+  }).use(letMeBuyProgram());
 
   const result = await client.letMeBuy.instructions
     .makePurchase({
-      signer: buyer,
+      signer: payer,
       authority: storeAuthority,
       mint,
       storeName,
@@ -71,7 +71,7 @@ async function main() {
   console.log("========================================\n");
   console.log("Signature:", result.context.signature);
   console.log(
-    `Explorer:  https://explorer.solana.com/tx/${result.context.signature}`
+    `Explorer:  https://explorer.solana.com/tx/${result.context.signature}`,
   );
 }
 

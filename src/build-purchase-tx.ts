@@ -20,7 +20,7 @@ import {
   updateOrAppendSetComputeUnitLimitInstruction,
   updateOrAppendSetComputeUnitPriceInstruction,
 } from "@solana-program/compute-budget";
-import { getMakePurchaseInstructionAsync } from "./generated/index.js";
+import { getMakePurchaseInstructionAsync } from "../clients/js/src/generated/index.js";
 import dotenv from "dotenv";
 
 dotenv.config();

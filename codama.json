@@ -1,10 +1,21 @@
 {
-  "idl": "src/idl/let_me_buy.json",
-  "before": [],
-  "scripts": {
-    "js": {
-      "from": "@codama/renderers-js",
-      "args": ["src/generated"]
+    "idl": "src/idl/let_me_buy.json",
+    "before": [],
+    "scripts": {
+        "js": {
+            "from": "@codama/renderers-js",
+            "args": [
+                "clients/js"
+            ]
+        },
+        "rust": {
+            "from": "@codama/renderers-rust",
+            "args": [
+                "clients/rust",
+                {
+                    "formatCode": true
+                }
+            ]
+        }
     }
-  }
 }
